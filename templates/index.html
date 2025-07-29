@@ -68,12 +68,14 @@
 
     #input {
       display: flex;
+      align-items: center;
       padding: 10px;
       border-top: 1px solid #ccc;
       background-color: #fff;
+      gap: 10px;
     }
 
-    #input input {
+    #input input[type="text"] {
       flex: 1;
       padding: 10px;
       font-size: 16px;
@@ -81,9 +83,8 @@
       border-radius: 4px;
     }
 
-    #input button {
-      padding: 10px 20px;
-      margin-left: 10px;
+    #input button, #file-upload-btn, #emoji-btn {
+      padding: 10px 15px;
       font-size: 16px;
       background-color: #007bff;
       color: white;
@@ -92,8 +93,66 @@
       cursor: pointer;
     }
 
-    #input button:hover {
+    #input button:hover, #file-upload-btn:hover, #emoji-btn:hover {
       background-color: #0056b3;
+    }
+
+    #file-upload {
+      display: none;
+    }
+
+    .emoji-picker {
+      position: absolute;
+      bottom: 60px;
+      right: 120px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: none;
+      max-width: 300px;
+      z-index: 1000;
+    }
+
+    .emoji-picker.show {
+      display: block;
+    }
+
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 5px;
+    }
+
+    .emoji {
+      padding: 5px;
+      cursor: pointer;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    .emoji:hover {
+      background-color: #f0f0f0;
+    }
+
+    .file-message {
+      background-color: #e8f4f8;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 5px 0;
+      border-left: 4px solid #007bff;
+    }
+
+    .file-link {
+      color: #007bff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .file-link:hover {
+      text-decoration: underline;
     }
 
     .connection-status {
@@ -107,10 +166,37 @@
     .connection-status.disconnected {
       background-color: #dc3545;
     }
+
+    .user-info {
+      padding: 5px 10px;
+      background-color: #28a745;
+      color: white;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .logout-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+
+    .logout-btn:hover {
+      background-color: #c82333;
+    }
   </style>
 </head>
 <body>
   <div id="connection-status" class="connection-status">Connecting...</div>
+  <div class="user-info">
+    Logged in as: <strong id="current-user"></strong>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
   <div id="chat-container">
     <div id="users">
       <h3>Online Users</h3>
@@ -120,7 +206,13 @@
       <div id="messages"></div>
       <div id="input">
         <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off" />
+        <input type="file" id="file-upload" />
+        <button id="file-upload-btn" onclick="document.getElementById('file-upload').click()">📎</button>
+        <button id="emoji-btn" onclick="toggleEmojiPicker()">😊</button>
         <button onclick="sendMessage()">Send</button>
+      </div>
+      <div class="emoji-picker" id="emoji-picker">
+        <div class="emoji-grid" id="emoji-grid"></div>
       </div>
     </div>
   </div>
@@ -131,16 +223,100 @@
     let username = null;
     const connectionStatus = document.getElementById('connection-status');
 
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        window.location.href = '/logout';
+      }
+    }
+
+    // Common emojis
+    const emojis = [
+      '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
+      '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '😘',
+      '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪',
+      '🤨', '🧐', '🤓', '😎', '🤩', '😏', '😒', '😞',
+      '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫',
+      '😩', '😤', '😠', '😡', '🤬', '🤯', '😳', '😱',
+      '😨', '😰', '😥', '😢', '😭', '😪', '😴', '🤤',
+      '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙',
+      '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐️',
+      '🖖', '👋', '🤝', '🙏', '✍️', '💪', '🦵', '🦶',
+      '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+      '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘',
+      '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️'
+    ];
+
+    // Initialize emoji picker
+    function initEmojiPicker() {
+      const emojiGrid = document.getElementById('emoji-grid');
+      emojis.forEach(emoji => {
+        const emojiElement = document.createElement('div');
+        emojiElement.className = 'emoji';
+        emojiElement.textContent = emoji;
+        emojiElement.onclick = () => insertEmoji(emoji);
+        emojiGrid.appendChild(emojiElement);
+      });
+    }
+
+    function toggleEmojiPicker() {
+      const picker = document.getElementById('emoji-picker');
+      picker.classList.toggle('show');
+    }
+
+    function insertEmoji(emoji) {
+      const input = document.getElementById('message-input');
+      input.value += emoji;
+      input.focus();
+      document.getElementById('emoji-picker').classList.remove('show');
+    }
+
+    // Close emoji picker when clicking outside
+    document.addEventListener('click', (e) => {
+      const picker = document.getElementById('emoji-picker');
+      const emojiBtn = document.getElementById('emoji-btn');
+      if (!picker.contains(e.target) && e.target !== emojiBtn) {
+        picker.classList.remove('show');
+      }
+    });
+
+    // File upload handling
+    document.getElementById('file-upload').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          socket.emit('file_message', {
+            user: username,
+            text: `Shared a file: ${result.original_name}`,
+            filename: result.filename,
+            original_name: result.original_name
+          });
+        } else {
+          alert('File upload failed. Please try again.');
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert('File upload failed. Please check your connection.');
+      }
+
+      e.target.value = '';
+    });
+
     // Connection status indicators
     socket.on('connect', () => {
       connectionStatus.textContent = 'Connected';
       connectionStatus.className = 'connection-status';
-      
-      // Prompt for username and join only after connection is established
-      if (!username) {
-        username = prompt("Enter your username") || "Anonymous";
-        socket.emit('join', username);
-      }
+      socket.emit('join');
     });
 
     socket.on('disconnect', () => {
@@ -154,12 +330,24 @@
       console.error('Connection error:', error);
     });
 
+    socket.on('auth_required', () => {
+      alert('Authentication required. Redirecting to login...');
+      window.location.href = '/login';
+    });
+
     socket.on('user_update', users => {
       const userList = document.getElementById('user-list');
       userList.innerHTML = '';
       users.forEach(user => {
         const li = document.createElement('li');
         li.textContent = user;
+        
+        if (user === username) {
+          li.style.fontWeight = 'bold';
+          li.style.color = '#ffd700';
+          document.getElementById('current-user').textContent = user;
+        }
+        
         userList.appendChild(li);
       });
     });
@@ -169,7 +357,10 @@
       const msg = document.createElement('div');
       msg.classList.add('message');
       
-      // Escape HTML to prevent XSS
+      if (data.user !== 'System' && !username) {
+        username = data.user;
+      }
+      
       const escapeHtml = (text) => {
         const map = {
           '&': '&amp;',
@@ -181,8 +372,19 @@
         return text.replace(/[&<>"']/g, m => map[m]);
       };
       
-      msg.innerHTML = `<strong>${escapeHtml(data.user)}</strong>: ${escapeHtml(data.text)} <span class="meta">${data.time}</span>`;
-      if (data.user === 'System') msg.classList.add('system');
+      if (data.type === 'file') {
+        msg.innerHTML = `
+          <div class="file-message">
+            <strong>${escapeHtml(data.user)}</strong>: 
+            <a href="/uploads/${data.filename}" target="_blank" class="file-link">${escapeHtml(data.original_name)}</a>
+            <span class="meta">${data.time}</span>
+          </div>
+        `;
+      } else {
+        msg.innerHTML = `<strong>${escapeHtml(data.user)}</strong>: ${escapeHtml(data.text)} <span class="meta">${data.time}</span>`;
+        if (data.user === 'System') msg.classList.add('system');
+      }
+      
       messages.appendChild(msg);
       messages.scrollTop = messages.scrollHeight;
     });
@@ -190,8 +392,8 @@
     function sendMessage() {
       const input = document.getElementById('message-input');
       const text = input.value.trim();
-      if (text !== '' && username && socket.connected) {
-        socket.emit('message', { user: username, text });
+      if (text !== '' && socket.connected) {
+        socket.emit('message', { text });
         input.value = '';
       }
     }
@@ -203,8 +405,8 @@
       }
     });
 
-    // Focus on input when page loads
     window.addEventListener('load', () => {
+      initEmojiPicker();
       document.getElementById('message-input').focus();
     });
   </script>
