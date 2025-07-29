@@ -1,13 +1,11 @@
-import os
 from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit, send, join_room, leave_room
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from datetime import datetime
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret-key'
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app)
 
-# Track connected users
 users = set()
 
 @app.route('/')
@@ -17,36 +15,36 @@ def index():
 @socketio.on('join')
 def handle_join(username):
     users.add(username)
-    join_room("chatroom")
-    timestamp = datetime.now().strftime('%H:%M:%S')
+    join_room('chat')
+    emit('user_update', list(users), broadcast=True)
     emit('message', {
-        'msg': f"{username} joined the chat!",
-        'username': 'System',
-        'timestamp': timestamp
-    }, room="chatroom")
-
-@socketio.on('message')
-def handle_message(data):
-    username = data['username']
-    msg = data['msg']
-    timestamp = datetime.now().strftime('%H:%M:%S')
-    print(f"📨 Message from {username} at {timestamp}: {msg}")
-    emit('message', {
-        'msg': msg,
-        'username': username,
-        'timestamp': timestamp
-    }, room="chatroom")
+        'user': 'System',
+        'text': f'{username} has joined the chat.',
+        'time': datetime.now().strftime('%H:%M:%S')
+    }, broadcast=True)
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    for user in list(users):
-        users.remove(user)
-        timestamp = datetime.now().strftime('%H:%M:%S')
+    # No username provided by disconnect event by default; workaround via sessions
+    # This simplified version assumes only one user per tab/session
+    for username in list(users):
+        users.remove(username)
+        emit('user_update', list(users), broadcast=True)
         emit('message', {
-            'msg': f"{user} has left the chat.",
-            'username': 'System',
-            'timestamp': timestamp
-        }, room="chatroom")
+            'user': 'System',
+            'text': f'{username} has left the chat.',
+            'time': datetime.now().strftime('%H:%M:%S')
+        }, broadcast=True)
+        break  # Prevents multiple emits per disconnect
+
+@socketio.on('message')
+def handle_message(data):
+    message = {
+        'user': data['user'],
+        'text': data['text'],
+        'time': datetime.now().strftime('%H:%M:%S')
+    }
+    emit('message', message, broadcast=True)
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+    socketio.run(app, debug=True)
