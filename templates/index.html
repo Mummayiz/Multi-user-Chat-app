@@ -89,10 +89,28 @@
       color: white;
       border: none;
       border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #input button:hover {
+      background-color: #0056b3;
+    }
+
+    .connection-status {
+      padding: 5px 10px;
+      font-size: 12px;
+      background-color: #28a745;
+      color: white;
+      text-align: center;
+    }
+
+    .connection-status.disconnected {
+      background-color: #dc3545;
     }
   </style>
 </head>
 <body>
+  <div id="connection-status" class="connection-status">Connecting...</div>
   <div id="chat-container">
     <div id="users">
       <h3>Online Users</h3>
@@ -110,9 +128,31 @@
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
     const socket = io();
-    let username = prompt("Enter your username");
+    let username = null;
+    const connectionStatus = document.getElementById('connection-status');
 
-    socket.emit('join', username);
+    // Connection status indicators
+    socket.on('connect', () => {
+      connectionStatus.textContent = 'Connected';
+      connectionStatus.className = 'connection-status';
+      
+      // Prompt for username and join only after connection is established
+      if (!username) {
+        username = prompt("Enter your username") || "Anonymous";
+        socket.emit('join', username);
+      }
+    });
+
+    socket.on('disconnect', () => {
+      connectionStatus.textContent = 'Disconnected';
+      connectionStatus.className = 'connection-status disconnected';
+    });
+
+    socket.on('connect_error', (error) => {
+      connectionStatus.textContent = 'Connection Error';
+      connectionStatus.className = 'connection-status disconnected';
+      console.error('Connection error:', error);
+    });
 
     socket.on('user_update', users => {
       const userList = document.getElementById('user-list');
@@ -128,7 +168,20 @@
       const messages = document.getElementById('messages');
       const msg = document.createElement('div');
       msg.classList.add('message');
-      msg.innerHTML = `<strong>${data.user}</strong>: ${data.text} <span class="meta">${data.time}</span>`;
+      
+      // Escape HTML to prevent XSS
+      const escapeHtml = (text) => {
+        const map = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+      };
+      
+      msg.innerHTML = `<strong>${escapeHtml(data.user)}</strong>: ${escapeHtml(data.text)} <span class="meta">${data.time}</span>`;
       if (data.user === 'System') msg.classList.add('system');
       messages.appendChild(msg);
       messages.scrollTop = messages.scrollHeight;
@@ -137,14 +190,22 @@
     function sendMessage() {
       const input = document.getElementById('message-input');
       const text = input.value.trim();
-      if (text !== '') {
+      if (text !== '' && username && socket.connected) {
         socket.emit('message', { user: username, text });
         input.value = '';
       }
     }
 
     document.getElementById('message-input').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') sendMessage();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Focus on input when page loads
+    window.addEventListener('load', () => {
+      document.getElementById('message-input').focus();
     });
   </script>
 </body>
