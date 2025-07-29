@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat App - Login</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #007bff, #0056b3);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .login-container {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .login-header h1 {
+      color: #333;
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .login-header p {
+      color: #666;
+      margin: 10px 0 0 0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin-bottom: 10px;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background-color: #6c757d;
+    }
+
+    .btn-secondary:hover {
+      background-color: #545b62;
+    }
+
+    .error-message {
+      background-color: #f8d7da;
+      color: #721c24;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .success-message {
+      background-color: #d4edda;
+      color: #155724;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .toggle-form {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+    }
+
+    .toggle-form a {
+      color: #007bff;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .toggle-form a:hover {
+      text-decoration: underline;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .loading:after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-header">
+      <h1>💬 Chat App</h1>
+      <p id="form-subtitle">Welcome back! Please sign in to continue.</p>
+    </div>
+
+    <div id="error-message" class="error-message"></div>
+    <div id="success-message" class="success-message"></div>
+
+    <form id="auth-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required minlength="3">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required minlength="6">
+      </div>
+
+      <button type="submit" class="btn" id="submit-btn">Sign In</button>
+      <div class="loading" id="loading"></div>
+    </form>
+
+    <div class="toggle-form">
+      <span id="toggle-text">Don't have an account? </span>
+      <a id="toggle-link" onclick="toggleForm()">Sign Up</a>
+    </div>
+  </div>
+
+  <script>
+    let isLoginMode = true;
+
+    function toggleForm() {
+      isLoginMode = !isLoginMode;
+      const subtitle = document.getElementById('form-subtitle');
+      const submitBtn = document.getElementById('submit-btn');
+      const toggleText = document.getElementById('toggle-text');
+      const toggleLink = document.getElementById('toggle-link');
+      
+      if (isLoginMode) {
+        subtitle.textContent = 'Welcome back! Please sign in to continue.';
+        submitBtn.textContent = 'Sign In';
+        toggleText.textContent = "Don't have an account? ";
+        toggleLink.textContent = 'Sign Up';
+      } else {
+        subtitle.textContent = 'Create a new account to join the chat.';
+        submitBtn.textContent = 'Sign Up';
+        toggleText.textContent = 'Already have an account? ';
+        toggleLink.textContent = 'Sign In';
+      }
+      
+      hideMessages();
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('error-message');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      hideSuccess();
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById('success-message');
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+      hideError();
+    }
+
+    function hideError() {
+      document.getElementById('error-message').style.display = 'none';
+    }
+
+    function hideSuccess() {
+      document.getElementById('success-message').style.display = 'none';
+    }
+
+    function hideMessages() {
+      hideError();
+      hideSuccess();
+    }
+
+    function setLoading(loading) {
+      const submitBtn = document.getElementById('submit-btn');
+      const loadingDiv = document.getElementById('loading');
+      
+      if (loading) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Please wait...';
+        loadingDiv.style.display = 'block';
+      } else {
+        submitBtn.disabled = false;
+        loadingDiv.style.display = 'none';
+        submitBtn.textContent = isLoginMode ? 'Sign In' : 'Sign Up';
+      }
+    }
+
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      
+      if (!username || !password) {
+        showError('Please fill in all fields');
+        return;
+      }
+
+      if (username.length < 3) {
+        showError('Username must be at least 3 characters long');
+        return;
+      }
+
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters long');
+        return;
+      }
+
+      setLoading(true);
+      hideMessages();
+
+      try {
+        const endpoint = isLoginMode ? '/login' : '/register';
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showSuccess(isLoginMode ? 'Login successful! Redirecting...' : 'Registration successful! Redirecting...');
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 1500);
+        } else {
+          showError(data.error || 'An error occurred');
+        }
+      } catch (error) {
+        showError('Network error. Please try again.');
+        console.error('Auth error:', error);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // Focus on username field when page loads
+    window.addEventListener('load', () => {
+      document.getElementById('username').focus();
+    });
+  </script>
+</body>
+</html>
