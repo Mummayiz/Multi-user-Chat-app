@@ -4,9 +4,10 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-users = set()
+# Store users with their session IDs
+users = {}
 
 @app.route('/')
 def index():
@@ -14,9 +15,15 @@ def index():
 
 @socketio.on('join')
 def handle_join(username):
-    users.add(username)
+    session_id = request.sid
+    users[session_id] = username
     join_room('chat')
-    emit('user_update', list(users), broadcast=True)
+    
+    # Send updated user list to all clients
+    user_list = list(users.values())
+    emit('user_update', user_list, broadcast=True)
+    
+    # Send join message
     emit('message', {
         'user': 'System',
         'text': f'{username} has joined the chat.',
@@ -25,26 +32,32 @@ def handle_join(username):
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    # No username provided by disconnect event by default; workaround via sessions
-    # This simplified version assumes only one user per tab/session
-    for username in list(users):
-        users.remove(username)
-        emit('user_update', list(users), broadcast=True)
+    session_id = request.sid
+    if session_id in users:
+        username = users[session_id]
+        del users[session_id]
+        
+        # Send updated user list to all remaining clients
+        user_list = list(users.values())
+        emit('user_update', user_list, broadcast=True)
+        
+        # Send leave message
         emit('message', {
             'user': 'System',
             'text': f'{username} has left the chat.',
             'time': datetime.now().strftime('%H:%M:%S')
         }, broadcast=True)
-        break  # Prevents multiple emits per disconnect
 
 @socketio.on('message')
 def handle_message(data):
-    message = {
-        'user': data['user'],
-        'text': data['text'],
-        'time': datetime.now().strftime('%H:%M:%S')
-    }
-    emit('message', message, broadcast=True)
+    session_id = request.sid
+    if session_id in users:
+        message = {
+            'user': data['user'],
+            'text': data['text'],
+            'time': datetime.now().strftime('%H:%M:%S')
+        }
+        emit('message', message, broadcast=True)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
