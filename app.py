@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, send_from_directory, jsonify, session, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from datetime import datetime
+import pytz
+import socket
 import os
 import sqlite3
 import hashlib
@@ -11,6 +13,9 @@ app.config['SECRET_KEY'] = 'your-secret-key-change-this'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# Set your timezone here - change this to your local timezone
+TIMEZONE = pytz.timezone('Asia/Kolkata')  # Change this to your timezone
+
 # Create uploads directory if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -19,6 +24,31 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # Store users with their session IDs
 users = {}  # session_id: username
 authenticated_users = {}  # session_id: user_data
+
+def find_free_port(start_port=5000, max_port=5100):
+    """Find a free port starting from start_port"""
+    for port in range(start_port, max_port):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('127.0.0.1', port))
+                return port
+        except OSError:
+            continue
+    return None
+
+def get_current_time():
+    """Get current time in the specified timezone"""
+    utc_now = datetime.utcnow()
+    utc_now = pytz.utc.localize(utc_now)
+    local_time = utc_now.astimezone(TIMEZONE)
+    return local_time.strftime('%H:%M:%S')
+
+def get_current_timestamp():
+    """Get current timestamp for database"""
+    utc_now = datetime.utcnow()
+    utc_now = pytz.utc.localize(utc_now)
+    local_time = utc_now.astimezone(TIMEZONE)
+    return local_time
 
 # Initialize database
 def init_db():
@@ -143,7 +173,8 @@ def upload_file():
     if file:
         filename = secure_filename(file.filename)
         # Add timestamp to avoid filename conflicts
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+        current_time = get_current_timestamp()
+        timestamp = current_time.strftime('%Y%m%d_%H%M%S_')
         filename = timestamp + filename
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
@@ -175,11 +206,11 @@ def handle_join():
     user_list = list(users.values())
     emit('user_update', user_list, broadcast=True)
     
-    # Send join message
+    # Send join message with correct time
     emit('message', {
         'user': 'System',
         'text': f'{username} has joined the chat.',
-        'time': datetime.now().strftime('%H:%M:%S')
+        'time': get_current_time()
     }, broadcast=True)
 
 @socketio.on('disconnect')
@@ -195,11 +226,11 @@ def handle_disconnect():
         user_list = list(users.values())
         emit('user_update', user_list, broadcast=True)
         
-        # Send leave message
+        # Send leave message with correct time
         emit('message', {
             'user': 'System',
             'text': f'{username} has left the chat.',
-            'time': datetime.now().strftime('%H:%M:%S')
+            'time': get_current_time()
         }, broadcast=True)
 
 @socketio.on('message')
@@ -210,7 +241,7 @@ def handle_message(data):
         message = {
             'user': username,
             'text': data['text'],
-            'time': datetime.now().strftime('%H:%M:%S')
+            'time': get_current_time()
         }
         emit('message', message, broadcast=True)
 
@@ -225,10 +256,25 @@ def handle_file_message(data):
             'filename': data['filename'],
             'original_name': data['original_name'],
             'type': 'file',
-            'time': datetime.now().strftime('%H:%M:%S')
+            'time': get_current_time()
         }
         emit('message', message, broadcast=True)
 
 if __name__ == '__main__':
     init_db()
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    
+    # Try to find a free port
+    port = find_free_port(5000, 5010)
+    if port is None:
+        print("❌ No free ports available between 5000-5010")
+        print("💡 Try closing other applications or restart your computer")
+        exit(1)
+    
+    print(f"🚀 Starting chat app on http://localhost:{port}")
+    print(f"🌟 Access your app at: http://127.0.0.1:{port}")
+    
+    try:
+        socketio.run(app, debug=True, host='127.0.0.1', port=port)
+    except Exception as e:
+        print(f"❌ Failed to start server: {e}")
+        print("💡 Try running: taskkill /f /im python.exe")
