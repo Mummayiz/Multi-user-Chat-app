@@ -3,217 +3,873 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Multi-User Chat App</title>
+  <title>ChatFlow - Real-time Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
+    * {
       margin: 0;
       padding: 0;
-      background: #f0f2f5;
-    }
-
-    #chat-container {
-      display: flex;
-      height: 100vh;
-    }
-
-    #users {
-      width: 200px;
-      background-color: #1e1f26;
-      color: white;
-      padding: 20px;
       box-sizing: border-box;
     }
 
-    #users h3 {
-      margin-top: 0;
-      font-size: 18px;
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f8fafc;
+      height: 100vh;
+      overflow: hidden;
     }
 
-    #users ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    #users li {
-      margin: 8px 0;
-    }
-
-    #chat {
-      flex: 1;
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1rem 1.5rem;
       display: flex;
-      flex-direction: column;
+      justify-content: between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      position: relative;
+      z-index: 100;
     }
 
-    #messages {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-    }
-
-    .message {
-      margin: 10px 0;
-    }
-
-    .system {
-      color: #777;
-      font-style: italic;
-    }
-
-    .meta {
-      font-size: 12px;
-      color: #999;
-      margin-left: 10px;
-    }
-
-    #input {
+    .header-left {
       display: flex;
       align-items: center;
-      padding: 10px;
-      border-top: 1px solid #ccc;
-      background-color: #fff;
-      gap: 10px;
+      gap: 1rem;
     }
 
-    #input input[type="text"] {
-      flex: 1;
-      padding: 10px;
-      font-size: 16px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 20px;
+      font-weight: 700;
     }
 
-    #input button, #file-upload-btn, #emoji-btn {
-      padding: 10px 15px;
-      font-size: 16px;
-      background-color: #007bff;
+    .logo::before {
+      content: "💬";
+      font-size: 24px;
+    }
+
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.disconnected {
+      background: #ef4444;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-left: auto;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+
+    .logout-btn {
+      background: rgba(255, 255, 255, 0.2);
       color: white;
       border: none;
-      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .logout-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    /* Main Container */
+    .chat-container {
+      display: flex;
+      height: calc(100vh - 80px);
+      background: #ffffff;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      background: #ffffff;
+      border-right: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+    }
+
+    .sidebar-header h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+
+    .online-count {
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .user-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .user-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 12px;
+      margin-bottom: 0.5rem;
+      transition: all 0.2s ease;
       cursor: pointer;
     }
 
-    #input button:hover, #file-upload-btn:hover, #emoji-btn:hover {
-      background-color: #0056b3;
+    .user-item:hover {
+      background: #f1f5f9;
     }
 
-    #file-upload {
+    .user-item.current-user {
+      background: linear-gradient(135deg, #667eea20, #764ba220);
+      border: 1px solid #667eea30;
+    }
+
+    .user-item-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+      position: relative;
+    }
+
+    .user-item-avatar::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #22c55e;
+      border: 2px solid white;
+    }
+
+    .user-item-info {
+      flex: 1;
+    }
+
+    .user-item-name {
+      font-weight: 500;
+      color: #1e293b;
+      font-size: 14px;
+    }
+
+    .user-item-status {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    /* Chat Area */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+    }
+
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      background: #f8fafc;
+      position: relative;
+    }
+
+    .messages-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .messages-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .messages-container::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    .messages-container::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Message Styles */
+    .message {
+      margin-bottom: 1.5rem;
+      animation: messageSlideIn 0.3s ease-out;
+    }
+
+    @keyframes messageSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message-wrapper {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .message-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .message-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .message-author {
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 14px;
+    }
+
+    .message-time {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .message-text {
+      color: #334155;
+      line-height: 1.5;
+      font-size: 14px;
+      word-wrap: break-word;
+    }
+
+    .message.system {
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    .message.system .message-text {
+      background: rgba(100, 116, 139, 0.1);
+      color: #64748b;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      display: inline-block;
+      font-size: 13px;
+      font-style: italic;
+    }
+
+    .file-message {
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border: 1px solid #bae6fd;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-top: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .file-message:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .file-icon {
+      width: 40px;
+      height: 40px;
+      background: #3b82fd;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 18px;
+    }
+
+    .file-details {
+      flex: 1;
+    }
+
+    .file-name {
+      font-weight: 500;
+      color: #1e293b;
+      margin-bottom: 0.25rem;
+    }
+
+    .file-meta {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .file-link {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .file-link:hover {
+      color: #1d4ed8;
+      text-decoration: underline;
+    }
+
+    /* Input Area */
+    .input-area {
+      padding: 1.5rem;
+      background: #ffffff;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .input-wrapper {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.75rem;
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 0.75rem;
+      transition: all 0.2s ease;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: #667eea;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .message-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 16px;
+      font-family: inherit;
+      resize: none;
+      max-height: 120px;
+      min-height: 20px;
+      line-height: 1.5;
+      color: #1e293b;
+    }
+
+    .message-input::placeholder {
+      color: #94a3b8;
+    }
+
+    .input-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .action-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s ease;
+      color: #64748b;
+    }
+
+    .action-btn:hover {
+      background: #e2e8f0;
+      color: #1e293b;
+      transform: translateY(-1px);
+    }
+
+    .send-btn {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+
+    .send-btn:hover {
+      background: linear-gradient(135deg, #5a67d8, #6b46c1);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .send-btn:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* File Upload */
+    .file-upload-input {
       display: none;
     }
 
+    /* Emoji Picker */
     .emoji-picker {
       position: absolute;
-      bottom: 60px;
-      right: 120px;
+      bottom: 80px;
+      right: 160px;
       background: white;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 1rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
       display: none;
-      max-width: 300px;
+      max-width: 320px;
       z-index: 1000;
+      backdrop-filter: blur(20px);
     }
 
     .emoji-picker.show {
       display: block;
+      animation: emojiPickerSlideIn 0.2s ease-out;
+    }
+
+    @keyframes emojiPickerSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .emoji-picker-header {
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .emoji-picker-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
     }
 
     .emoji-grid {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
-      gap: 5px;
+      gap: 0.5rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .emoji-grid::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .emoji-grid::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .emoji-grid::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 2px;
     }
 
     .emoji {
-      padding: 5px;
+      padding: 0.5rem;
       cursor: pointer;
-      border-radius: 4px;
+      border-radius: 8px;
       text-align: center;
       font-size: 18px;
+      transition: all 0.2s ease;
+      user-select: none;
     }
 
     .emoji:hover {
-      background-color: #f0f0f0;
+      background: #f1f5f9;
+      transform: scale(1.2);
     }
 
-    .file-message {
-      background-color: #e8f4f8;
-      padding: 10px;
-      border-radius: 8px;
-      margin: 5px 0;
-      border-left: 4px solid #007bff;
+    /* Typing Indicator */
+    .typing-indicator {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.5rem;
+      color: #64748b;
+      font-size: 14px;
+      font-style: italic;
     }
 
-    .file-link {
-      color: #007bff;
-      text-decoration: none;
-      font-weight: bold;
+    .typing-dots {
+      display: flex;
+      gap: 0.25rem;
     }
 
-    .file-link:hover {
-      text-decoration: underline;
+    .typing-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #94a3b8;
+      animation: typingBounce 1.4s infinite;
     }
 
-    .connection-status {
-      padding: 5px 10px;
-      font-size: 12px;
-      background-color: #28a745;
-      color: white;
-      text-align: center;
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
     }
 
-    .connection-status.disconnected {
-      background-color: #dc3545;
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
     }
 
-    .user-info {
-      padding: 5px 10px;
-      background-color: #28a745;
-      color: white;
-      font-size: 12px;
-      text-align: center;
+    @keyframes typingBounce {
+      0%, 60%, 100% {
+        transform: translateY(0);
+      }
+      30% {
+        transform: translateY(-8px);
+      }
     }
 
-    .logout-btn {
-      background-color: #dc3545;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      margin-left: 10px;
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: -100%;
+        height: 100%;
+        z-index: 200;
+        transition: left 0.3s ease;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .sidebar.open {
+        left: 0;
+      }
+
+      .header {
+        padding: 1rem;
+      }
+
+      .header-left {
+        gap: 0.5rem;
+      }
+
+      .logo {
+        font-size: 18px;
+      }
+
+      .user-info {
+        display: none;
+      }
+
+      .mobile-menu-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        cursor: pointer;
+        font-size: 18px;
+      }
+
+      .input-area {
+        padding: 1rem;
+      }
+
+      .emoji-picker {
+        right: 1rem;
+        left: 1rem;
+        max-width: none;
+      }
+
+      .message-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+      }
+
+      .user-item-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+      }
     }
 
-    .logout-btn:hover {
-      background-color: #c82333;
+    /* Desktop-only mobile menu button (hidden) */
+    .mobile-menu-btn {
+      display: none;
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #0f172a;
+      }
+
+      .chat-container,
+      .sidebar,
+      .chat-area,
+      .input-area {
+        background: #1e293b;
+        color: #e2e8f0;
+      }
+
+      .sidebar-header {
+        background: #334155;
+        border-color: #475569;
+      }
+
+      .sidebar {
+        border-color: #475569;
+      }
+
+      .input-area {
+        border-color: #475569;
+      }
+
+      .messages-container {
+        background: #0f172a;
+      }
+
+      .input-wrapper {
+        background: #334155;
+        border-color: #475569;
+      }
+
+      .input-wrapper:focus-within {
+        background: #1e293b;
+      }
+
+      .message-text,
+      .message-author {
+        color: #e2e8f0;
+      }
+
+      .user-item:hover {
+        background: #334155;
+      }
+
+      .action-btn:hover {
+        background: #475569;
+        color: #e2e8f0;
+      }
+
+      .emoji-picker {
+        background: #1e293b;
+        border-color: #475569;
+      }
+    }
+
+    /* Animation for initial load */
+    .chat-container {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* Custom scrollbar for webkit browsers */
+    .messages-container,
+    .user-list {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+
+    /* Focus styles for accessibility */
+    .action-btn:focus-visible,
+    .logout-btn:focus-visible {
+      outline: 2px solid #667eea;
+      outline-offset: 2px;
+    }
+
+    .message-input:focus {
+      outline: none;
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+      .input-wrapper {
+        border-width: 3px;
+      }
+      
+      .user-item-avatar,
+      .message-avatar {
+        border: 2px solid currentColor;
+      }
     }
   </style>
 </head>
 <body>
-  <div id="connection-status" class="connection-status">Connecting...</div>
-  <div class="user-info">
-    Logged in as: <strong id="current-user"></strong>
-    <button class="logout-btn" onclick="logout()">Logout</button>
-  </div>
-  <div id="chat-container">
-    <div id="users">
-      <h3>Online Users</h3>
-      <ul id="user-list"></ul>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="logo">ChatFlow</div>
+      <div class="connection-status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="connection-text">Connecting...</span>
+      </div>
     </div>
-    <div id="chat">
-      <div id="messages"></div>
-      <div id="input">
-        <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off" />
-        <input type="file" id="file-upload" />
-        <button id="file-upload-btn" onclick="document.getElementById('file-upload').click()">📎</button>
-        <button id="emoji-btn" onclick="toggleEmojiPicker()">😊</button>
-        <button onclick="sendMessage()">Send</button>
+    <div class="header-right">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar"></div>
+        <span id="current-user-name">Loading...</span>
       </div>
-      <div class="emoji-picker" id="emoji-picker">
-        <div class="emoji-grid" id="emoji-grid"></div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="chat-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h3>Online Users</h3>
+        <div class="online-count" id="online-count">0 users online</div>
       </div>
+      <div class="user-list" id="user-list">
+        <!-- Users will be populated here -->
+      </div>
+    </aside>
+
+    <!-- Chat Area -->
+    <main class="chat-area">
+      <div class="messages-container" id="messages">
+        <!-- Messages will be populated here -->
+      </div>
+      
+      <div class="typing-indicator" id="typing-indicator">
+        <div class="typing-dots">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+        <span id="typing-text">Someone is typing...</span>
+      </div>
+
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea 
+            class="message-input" 
+            id="message-input" 
+            placeholder="Type your message..." 
+            rows="1"
+            autocomplete="off"
+          ></textarea>
+          <div class="input-actions">
+            <input type="file" id="file-upload" class="file-upload-input" />
+            <button class="action-btn" id="file-btn" onclick="document.getElementById('file-upload').click()" title="Attach file">
+              📎
+            </button>
+            <button class="action-btn" id="emoji-btn" onclick="toggleEmojiPicker()" title="Add emoji">
+              😊
+            </button>
+            <button class="action-btn send-btn" id="send-btn" onclick="sendMessage()" title="Send message">
+              ➤
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Emoji Picker -->
+    <div class="emoji-picker" id="emoji-picker">
+      <div class="emoji-picker-header">
+        <div class="emoji-picker-title">Choose an emoji</div>
+      </div>
+      <div class="emoji-grid" id="emoji-grid"></div>
     </div>
   </div>
 
@@ -221,13 +877,21 @@
   <script>
     const socket = io();
     let username = null;
-    const connectionStatus = document.getElementById('connection-status');
+    let currentUser = null;
 
-    function logout() {
-      if (confirm('Are you sure you want to logout?')) {
-        window.location.href = '/logout';
-      }
-    }
+    // DOM Elements
+    const statusDot = document.getElementById('status-dot');
+    const connectionText = document.getElementById('connection-text');
+    const currentUserName = document.getElementById('current-user-name');
+    const userAvatar = document.getElementById('user-avatar');
+    const onlineCount = document.getElementById('online-count');
+    const userList = document.getElementById('user-list');
+    const messages = document.getElementById('messages');
+    const messageInput = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const emojiPicker = document.getElementById('emoji-picker');
+    const emojiGrid = document.getElementById('emoji-grid');
+    const sidebar = document.getElementById('sidebar');
 
     // Common emojis
     const emojis = [
@@ -243,12 +907,13 @@
       '🖖', '👋', '🤝', '🙏', '✍️', '💪', '🦵', '🦶',
       '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
       '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘',
-      '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️'
+      '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️',
+      '🔥', '⭐', '🌟', '✨', '⚡', '🌈', '🎉', '🎊'
     ];
 
     // Initialize emoji picker
     function initEmojiPicker() {
-      const emojiGrid = document.getElementById('emoji-grid');
+      emojiGrid.innerHTML = '';
       emojis.forEach(emoji => {
         const emojiElement = document.createElement('div');
         emojiElement.className = 'emoji';
@@ -259,30 +924,201 @@
     }
 
     function toggleEmojiPicker() {
-      const picker = document.getElementById('emoji-picker');
-      picker.classList.toggle('show');
+      emojiPicker.classList.toggle('show');
     }
 
     function insertEmoji(emoji) {
-      const input = document.getElementById('message-input');
-      input.value += emoji;
-      input.focus();
-      document.getElementById('emoji-picker').classList.remove('show');
+      const cursorPos = messageInput.selectionStart;
+      const textBefore = messageInput.value.substring(0, cursorPos);
+      const textAfter = messageInput.value.substring(cursorPos);
+      messageInput.value = textBefore + emoji + textAfter;
+      messageInput.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+      messageInput.focus();
+      emojiPicker.classList.remove('show');
+      updateSendButton();
     }
 
-    // Close emoji picker when clicking outside
-    document.addEventListener('click', (e) => {
-      const picker = document.getElementById('emoji-picker');
-      const emojiBtn = document.getElementById('emoji-btn');
-      if (!picker.contains(e.target) && e.target !== emojiBtn) {
-        picker.classList.remove('show');
+    function toggleSidebar() {
+      sidebar.classList.toggle('open');
+    }
+
+    function logout() {
+      if (confirm('Are you sure you want to sign out?')) {
+        window.location.href = '/logout';
       }
+    }
+
+    function getInitials(name) {
+      return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+    }
+
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function formatTime(timeString) {
+      return timeString;
+    }
+
+    function updateSendButton() {
+      const hasText = messageInput.value.trim().length > 0;
+      sendBtn.disabled = !hasText || !socket.connected;
+    }
+
+    // Auto-resize textarea
+    function autoResize() {
+      messageInput.style.height = 'auto';
+      messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+    }
+
+    // Socket event handlers
+    socket.on('connect', () => {
+      statusDot.classList.remove('disconnected');
+      connectionText.textContent = 'Connected';
+      updateSendButton();
+      socket.emit('join');
     });
+
+    socket.on('disconnect', () => {
+      statusDot.classList.add('disconnected');
+      connectionText.textContent = 'Disconnected';
+      updateSendButton();
+    });
+
+    socket.on('connect_error', (error) => {
+      statusDot.classList.add('disconnected');
+      connectionText.textContent = 'Connection Error';
+      console.error('Connection error:', error);
+    });
+
+    socket.on('auth_required', () => {
+      alert('Authentication required. Redirecting to login...');
+      window.location.href = '/login';
+    });
+
+    socket.on('user_update', users => {
+      userList.innerHTML = '';
+      onlineCount.textContent = `${users.length} user${users.length !== 1 ? 's' : ''} online`;
+      
+      users.forEach(user => {
+        const userItem = document.createElement('div');
+        userItem.className = 'user-item';
+        
+        if (user === currentUser) {
+          userItem.classList.add('current-user');
+          currentUserName.textContent = user;
+          userAvatar.textContent = getInitials(user);
+        }
+        
+        const initials = getInitials(user);
+        userItem.innerHTML = `
+          <div class="user-item-avatar">${initials}</div>
+          <div class="user-item-info">
+            <div class="user-item-name">${escapeHtml(user)}</div>
+            <div class="user-item-status">Online</div>
+          </div>
+        `;
+        
+        userList.appendChild(userItem);
+      });
+    });
+
+    socket.on('message', data => {
+      const isSystem = data.user === 'System';
+      if (!currentUser && !isSystem) {
+        currentUser = data.user;
+      }
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${isSystem ? 'system' : ''}`;
+      
+      if (isSystem) {
+        messageDiv.innerHTML = `
+          <div class="message-text">${escapeHtml(data.text)}</div>
+        `;
+      } else if (data.type === 'file') {
+        const fileExtension = data.original_name.split('.').pop().toLowerCase();
+        const fileIcon = getFileIcon(fileExtension);
+        
+        messageDiv.innerHTML = `
+          <div class="message-wrapper">
+            <div class="message-avatar">${getInitials(data.user)}</div>
+            <div class="message-content">
+              <div class="message-header">
+                <span class="message-author">${escapeHtml(data.user)}</span>
+                <span class="message-time">${formatTime(data.time)}</span>
+              </div>
+              <div class="file-message">
+                <div class="file-info">
+                  <div class="file-icon">${fileIcon}</div>
+                  <div class="file-details">
+                    <div class="file-name">
+                      <a href="/uploads/${data.filename}" target="_blank" class="file-link">
+                        ${escapeHtml(data.original_name)}
+                      </a>
+                    </div>
+                    <div class="file-meta">Click to download</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        messageDiv.innerHTML = `
+          <div class="message-wrapper">
+            <div class="message-avatar">${getInitials(data.user)}</div>
+            <div class="message-content">
+              <div class="message-header">
+                <span class="message-author">${escapeHtml(data.user)}</span>
+                <span class="message-time">${formatTime(data.time)}</span>
+              </div>
+              <div class="message-text">${escapeHtml(data.text)}</div>
+            </div>
+          </div>
+        `;
+      }
+      
+      messages.appendChild(messageDiv);
+      messages.scrollTop = messages.scrollHeight;
+    });
+
+    function getFileIcon(extension) {
+      const iconMap = {
+        'pdf': '📄',
+        'doc': '📝',
+        'docx': '📝',
+        'txt': '📄',
+        'jpg': '🖼️',
+        'jpeg': '🖼️',
+        'png': '🖼️',
+        'gif': '🖼️',
+        'mp4': '🎥',
+        'mp3': '🎵',
+        'zip': '📦',
+        'rar': '📦'
+      };
+      return iconMap[extension] || '📎';
+    }
 
     // File upload handling
     document.getElementById('file-upload').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+
+      const maxSize = 16 * 1024 * 1024; // 16MB
+      if (file.size > maxSize) {
+        alert('File size must be less than 16MB');
+        e.target.value = '';
+        return;
+      }
 
       const formData = new FormData();
       formData.append('file', file);
@@ -296,13 +1132,13 @@
         if (response.ok) {
           const result = await response.json();
           socket.emit('file_message', {
-            user: username,
             text: `Shared a file: ${result.original_name}`,
             filename: result.filename,
             original_name: result.original_name
           });
         } else {
-          alert('File upload failed. Please try again.');
+          const error = await response.json();
+          alert(error.error || 'File upload failed. Please try again.');
         }
       } catch (error) {
         console.error('Upload error:', error);
@@ -312,102 +1148,59 @@
       e.target.value = '';
     });
 
-    // Connection status indicators
-    socket.on('connect', () => {
-      connectionStatus.textContent = 'Connected';
-      connectionStatus.className = 'connection-status';
-      socket.emit('join');
-    });
-
-    socket.on('disconnect', () => {
-      connectionStatus.textContent = 'Disconnected';
-      connectionStatus.className = 'connection-status disconnected';
-    });
-
-    socket.on('connect_error', (error) => {
-      connectionStatus.textContent = 'Connection Error';
-      connectionStatus.className = 'connection-status disconnected';
-      console.error('Connection error:', error);
-    });
-
-    socket.on('auth_required', () => {
-      alert('Authentication required. Redirecting to login...');
-      window.location.href = '/login';
-    });
-
-    socket.on('user_update', users => {
-      const userList = document.getElementById('user-list');
-      userList.innerHTML = '';
-      users.forEach(user => {
-        const li = document.createElement('li');
-        li.textContent = user;
-        
-        if (user === username) {
-          li.style.fontWeight = 'bold';
-          li.style.color = '#ffd700';
-          document.getElementById('current-user').textContent = user;
-        }
-        
-        userList.appendChild(li);
-      });
-    });
-
-    socket.on('message', data => {
-      const messages = document.getElementById('messages');
-      const msg = document.createElement('div');
-      msg.classList.add('message');
-      
-      if (data.user !== 'System' && !username) {
-        username = data.user;
-      }
-      
-      const escapeHtml = (text) => {
-        const map = {
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, m => map[m]);
-      };
-      
-      if (data.type === 'file') {
-        msg.innerHTML = `
-          <div class="file-message">
-            <strong>${escapeHtml(data.user)}</strong>: 
-            <a href="/uploads/${data.filename}" target="_blank" class="file-link">${escapeHtml(data.original_name)}</a>
-            <span class="meta">${data.time}</span>
-          </div>
-        `;
-      } else {
-        msg.innerHTML = `<strong>${escapeHtml(data.user)}</strong>: ${escapeHtml(data.text)} <span class="meta">${data.time}</span>`;
-        if (data.user === 'System') msg.classList.add('system');
-      }
-      
-      messages.appendChild(msg);
-      messages.scrollTop = messages.scrollHeight;
-    });
-
     function sendMessage() {
-      const input = document.getElementById('message-input');
-      const text = input.value.trim();
+      const text = messageInput.value.trim();
       if (text !== '' && socket.connected) {
         socket.emit('message', { text });
-        input.value = '';
+        messageInput.value = '';
+        autoResize();
+        updateSendButton();
       }
     }
 
-    document.getElementById('message-input').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
+    // Event listeners
+    messageInput.addEventListener('input', () => {
+      autoResize();
+      updateSendButton();
+    });
+
+    messageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
       }
     });
 
+    // Close emoji picker when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!emojiPicker.contains(e.target) && e.target.id !== 'emoji-btn') {
+        emojiPicker.classList.remove('show');
+      }
+      
+      // Close sidebar on mobile when clicking outside
+      if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !e.target.classList.contains('mobile-menu-btn')) {
+        sidebar.classList.remove('open');
+      }
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768) {
+        sidebar.classList.remove('open');
+      }
+    });
+
+    // Initialize
     window.addEventListener('load', () => {
       initEmojiPicker();
-      document.getElementById('message-input').focus();
+      messageInput.focus();
+      updateSendButton();
+      
+      // Add entrance animation
+      document.querySelector('.chat-container').style.opacity = '0';
+      setTimeout(() => {
+        document.querySelector('.chat-container').style.opacity = '1';
+      }, 100);
     });
   </script>
 </body>
